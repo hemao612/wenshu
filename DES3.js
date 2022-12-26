@@ -219,7 +219,7 @@ function pad(key) {
     return key;
 }
 
-var des3iv = '12345678';
+var des3iv = 'sL9p4mS2mSVTSBzWn4p16Mu7';
 module.exports = {
     //3DES加密，CBC/PKCS5Padding
     encrypt: function (key, input) {

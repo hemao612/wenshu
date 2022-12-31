@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
-    private final String cookie = "wzws_sessionid=gWE4MThhYqBjrv9UgDE4My4xNC4xMzUuMTkzgjZmNjkwMQ==; SESSION=3219f5b9-18ec-4770-b773-a91d6014c748; wzws_cid=78534f65143035fd3dba75cde6035616a2e69fbc92b2cb9c246d6fd97c6fed20c2ccc32642064effce6363b4fca8560f6b749cc02023e24ddfdf5c0a62ac2a71e52bdcbd148603f9399b475562faf1db";
+    private final String cookie = "wzws_sessionid=oGOvqHGBYTgxOGFigDE4My4xNC4yOC4xNDKCNmY2OTAx; SESSION=0d280518-a5a5-4f1e-8d9c-4ef766ce36c1; wzws_cid=cc0737f52b5166d3482c2fa1ea009f0c790a1b2c63fb313cb3d5b2a1ff0388df32be4abc06bfc38405366abb4f85621a97b3c913d28157467d1189088a6d7fb23c5128048fde7457ca0747987f80f981";
 
     public static void main(String[] args) {
 //        new DocumentService().page(1, 5);
@@ -29,7 +29,8 @@ public class Main {
         RequestBody body = RequestBody.create(mediaType, "pageId=" + pageId +
                 "&s21=%E5%8A%B3%E5%8A%A8%E4%BA%89%E8%AE%AE&sortFields=s50%3Adesc" +
                 "&ciphertext=" + cipherText +
-                "&pageNum=1&queryCondition=%5B%7B%22key%22%3A%22s21%22%2C%22value%22%3A%22%E5%8A%B3%E5%8A%A8%E4%BA%89%E8%AE%AE%22%7D%5D&cfg=com.lawyee.judge.dc.parse.dto.SearchDataDsoDTO%40queryDoc" +
+                "&pageNum=1&queryCondition=%5B%7B%22key%22%3A%22s21%22%2C%22value%22%3A%22%E5%8A%B3%E5%8A%A8%E4%BA%89%E8%AE%AE%22%7D%2C%7B%22key%22%3A%22cprq%22%2C%22value%22%3A%222010-01-01+TO+2010-02-01%22%7D%5D" +
+                "&cfg=com.lawyee.judge.dc.parse.dto.SearchDataDsoDTO%40queryDoc" +
                 "&__RequestVerificationToken=" + requestToken + "&wh=964&ww=937&cs=0");
         Request request = new Request.Builder()
                 .url("https://wenshu.court.gov.cn/website/parse/rest.q4w")
@@ -90,7 +91,7 @@ public class Main {
                 .addHeader("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7")
                 .addHeader("Connection", "keep-alive")
                 .addHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                .addHeader("Cookie", "wzws_sessionid=gWE4MThhYqBjrv9UgDE4My4xNC4xMzUuMTkzgjZmNjkwMQ==; SESSION=3219f5b9-18ec-4770-b773-a91d6014c748")
+                .addHeader("Cookie", cookie)
                 .addHeader("Origin", "https://wenshu.court.gov.cn")
                 .addHeader("Referer", "https://wenshu.court.gov.cn/website/wenshu/181107ANFZ0BXSK4/index.html?docId=" + docId)
                 .addHeader("Sec-Fetch-Dest", "empty")

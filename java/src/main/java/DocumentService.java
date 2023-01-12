@@ -27,7 +27,7 @@ public class DocumentService {
     private LocalDate date = LocalDate.now();
     private Integer min = 10;
     private Integer max = 30;
-    private String sessionCookie = "wzws_sessionid=gWE4MThhYqBjrv9UgDE4My4xNC4xMzUuMTkzgjZmNjkwMQ==; SESSION=3219f5b9-18ec-4770-b773-a91d6014c748; wzws_cid=78534f65143035fd3dba75cde6035616a2e69fbc92b2cb9c246d6fd97c6fed20c2ccc32642064effce6363b4fca8560f6b749cc02023e24ddfdf5c0a62ac2a71e52bdcbd148603f9399b475562faf1db";
+    private String sessionCookie = "wzws_sessionid=gWE4MThhYoAxODMuMTQuMjguMTQygjZmNjkwMaBjs8Bv; SESSION=4bf4abd5-76db-4dcf-a27d-023c7fcd1c9a; wzws_cid=76193986400dadec5608381cf86d3814e56b0fff1fc2efdbbdda819f044cc826fdcc202a810473b6bba0a6e80f76bcc32ee9cf1cc251041f0f0d0969e7423f1394ad28048c94999a42b599ec7ede96c7";
     private String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36";
     private String requestVerificationToken = ParamsUtils.random(24);
     private AtomicInteger intervalDays = new AtomicInteger(0);
@@ -118,10 +118,11 @@ public class DocumentService {
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
             }
-            list(pageNum, pageSize);
+//            list(pageNum, pageSize);
         }
         try {
             System.out.println("Get list body:" + response.body());
+            String body = response.body();
             Result result = JSON.parseObject(response.body(), Result.class);
             if (result.getCode() == -12) {
                 TimeUnit.HOURS.sleep(6);
@@ -146,9 +147,9 @@ public class DocumentService {
                 }
             }
             TimeUnit.SECONDS.sleep(RandomUtil.randomInt(min, max));
-            if (count >= pageSize) {
-                list(pageNum + 1, pageSize);
-            }
+//            if (count >= pageSize) {
+//                list(pageNum + 1, pageSize);
+//            }
         } catch (Exception e) {
             try {
                 if (response != null) {

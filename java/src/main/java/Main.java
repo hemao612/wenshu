@@ -32,6 +32,9 @@ public class Main {
     private CSVWriter csvWriter = null;
     private List<String> cityList = new ArrayList<>();
     private Map<String, String[]> cityMap = new HashMap<>();
+    private Map<String, String> districtMap = new HashMap<>();
+    private Map<String, String> districtCodeMap = new HashMap<>();
+    private Map<String, String> districtAbbrMap = new HashMap<>();
     private String year = "2011";
 
 
@@ -39,6 +42,7 @@ public class Main {
 //        new DocumentService().page(1, 5);
         Main main = new Main();
         main.readCityCode();
+        main.readDistrictCode();
         main.parseFile();
 //        main.fetchList();
 //        try {
@@ -377,6 +381,13 @@ public class Main {
                 city = matcher.group("city");
                 city = city == null ? "TBD" : city.trim();
             }
+            String abbr = getAbbr(city);
+            String districtCode = districtCodeMap.get(abbr);
+            if (districtCode != null) {
+                districtCode = districtCode.substring(0, 4) + "00";
+                abbr = districtMap.get(districtCode);
+                city = districtAbbrMap.get(abbr);
+            }
             return city;
         }
         return city;
@@ -475,6 +486,28 @@ public class Main {
         }
     }
 
+    private void readDistrictCode() {
+        try {
+            String path = "D:\\work\\wenshu\\districtcode.txt";
+            File file = new File(path);
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] lineArray = line.split("\t");
+                String districtCode = lineArray[0];
+                String districtName = lineArray[1];
+                String districtAbbr = getAbbr(districtName);
+                districtAbbrMap.put(districtAbbr, districtName);
+                districtMap.put(districtCode, districtAbbr);
+                districtCodeMap.put(districtAbbr, districtCode);
+                System.out.println(districtCode + " " + districtName);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void writeFileTest() {
         String fileName = "D:\\work\\wenshu\\result\\test.html";
         try {
@@ -558,5 +591,18 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getAbbr(String districtName) {
+        String abbr = "";
+        if (districtName.length() >= 3) {
+            if (districtName.endsWith("自治州") || districtName.endsWith("自治县") || districtName.endsWith("自治区")) {
+                abbr = districtName.substring(0, districtName.length() - 3);
+            }
+            if (districtName.endsWith("市") || districtName.endsWith("区") || districtName.endsWith("县")) {
+                abbr = districtName.substring(0, districtName.length() - 1);
+            }
+        }
+        return abbr;
     }
 }

@@ -10,6 +10,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.util.IOUtils;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import utils.ParamsUtils;
 import utils.TripleDES;
@@ -32,10 +33,10 @@ public class Main {
     private CSVWriter csvWriter = null;
     private List<String> cityList = new ArrayList<>();
     private Map<String, String[]> cityMap = new HashMap<>();
+    private Map<String, String[]> provMap = new HashMap<>();
     private Map<String, String> districtMap = new HashMap<>();
     private Map<String, String> districtCodeMap = new HashMap<>();
     private Map<String, String> districtAbbrMap = new HashMap<>();
-    private String year = "2011";
 
 
     public static void main(String[] args) {
@@ -228,7 +229,7 @@ public class Main {
             String[] line = {caseNo, name, plaintiff, parsePlaintiffType(plaintiff), defendant, parsePlaintiffType(defendant),
                     courtName, cityName, getCityEng(cityName), getCityCode(cityName), getProvChn(cityName), getProvEng(cityName),
                     getProvCode(cityName), refereeYear, refereeMonth, refereeDay, caseType,
-                    parseWin(judgmentResult), judgmentResult};
+                    "TBD", judgmentResult};
             csvWriter.writeNext(line);
             TimeUnit.SECONDS.sleep(RandomUtil.randomInt(5, 10));
         }
@@ -393,26 +394,25 @@ public class Main {
         return city;
     }
 
-    private String getProvChn(String city) {
-        String[] cityLine = cityMap.get(city);
-        if (cityLine != null) {
-            return cityLine[0];
+    private String getProvChn(String provName) {
+        if (provName.endsWith("省")) {
+            return provName.substring(0, provName.length() - 1);
+        }
+        return provName;
+    }
+
+    private String getProvEng(String provName) {
+        String[] provLine = provMap.get(provName);
+        if (provLine != null) {
+            return provLine[1];
         }
         return "TBD";
     }
 
-    private String getProvEng(String city) {
-        String[] cityLine = cityMap.get(city);
-        if (cityLine != null) {
-            return cityLine[1];
-        }
-        return "TBD";
-    }
-
-    private String getProvCode(String city) {
-        String[] cityLine = cityMap.get(city);
-        if (cityLine != null) {
-            return cityLine[2];
+    private String getProvCode(String provName) {
+        String[] provLine = provMap.get(provName);
+        if (provLine != null) {
+            return provLine[2];
         }
         return "TBD";
     }
@@ -437,8 +437,60 @@ public class Main {
         return "TBD";
     }
 
-    private String parseWin(String winString) {
-        return "TBD";
+    private String parseWin(String plaintiff, String plaintiffType, String defendant, String defendantType, String winString) {
+        if (plaintiff.length() == 0 || defendant.length() == 0 || winString.length() == 0) {
+            return "TBD: defendant or plaintiff is not clear";
+        }
+        int plaintiffScore = 0;
+        int defendantScore = 0;
+        String[] judgementResults = winString.split("\n");
+        for (String judgementResult : judgementResults) {
+            if (judgementResult.contains("驳回上诉") ||
+                    judgementResult.contains("驳回申请人") ||
+                    judgementResult.contains("驳回原告") ||
+                    judgementResult.contains("驳回" + plaintiff) ||
+                    judgementResult.contains("驳" + plaintiff) ||
+                    judgementResult.contains("向" + defendant + "支付") ||
+                    judgementResult.contains("支付给被告") ||
+                    judgementResult.contains("支付给" + defendant) ||
+                    judgementResult.contains("支付" + defendant) ||
+                    judgementResult.contains("支付被告")) {
+                defendantScore++;
+            }
+            if (judgementResult.contains("由原告负担") ||
+                    judgementResult.contains("由原告承担") ||
+                    judgementResult.contains("由" + plaintiff + "负担") ||
+                    judgementResult.contains("由" + plaintiff + "承担") ||
+                    judgementResult.contains("由原告" + plaintiff + "负担") ||
+                    judgementResult.contains("由原告" + plaintiff + "承担")) {
+                defendantScore = defendantScore + 1000;
+            }
+            if (judgementResult.contains("驳回被告") ||
+                    judgementResult.contains("驳回" + defendant) ||
+                    judgementResult.contains("驳" + defendant) ||
+                    judgementResult.contains("向" + plaintiff + "支付") ||
+                    judgementResult.contains("支付给原告") ||
+                    judgementResult.contains("支付给" + plaintiff) ||
+                    judgementResult.contains("支付" + plaintiff) ||
+                    judgementResult.contains("支付原告")) {
+                plaintiffScore++;
+            }
+            if (judgementResult.contains("由被告负担") ||
+                    judgementResult.contains("由被告承担") ||
+                    judgementResult.contains("由" + defendant + "负担") ||
+                    judgementResult.contains("由" + defendant + "承担") ||
+                    judgementResult.contains("由被告" + defendant + "负担") ||
+                    judgementResult.contains("由被告" + defendant + "承担")) {
+                plaintiffScore = plaintiffScore + 1000;
+            }
+        }
+        if (plaintiffScore > defendantScore) {
+            return plaintiffType;
+        } else if (plaintiffScore < defendantScore) {
+            return defendantType;
+        } else {
+            return "TBD";
+        }
     }
 
     private String parsePlaintiff(List<String> plaintiffList) {
@@ -448,7 +500,7 @@ public class Main {
             for (int i = 1; i < plaintiffList.size(); i++) {
                 String type = parsePlaintiffType(plaintiffList.get(i));
                 if (plaintiffType.equals(type)) {
-                    plaintiff.append(",").append(plaintiffList.get(i));
+                    plaintiff.append("、").append(plaintiffList.get(i));
                 }
             }
         }
@@ -466,7 +518,7 @@ public class Main {
                 }
             }
         }
-        return String.join(",", defendants);
+        return String.join("、", defendants);
     }
 
     private void readCityCode() {
@@ -479,6 +531,7 @@ public class Main {
             String[] line;
             while ((line = csvReader.readNext()) != null) {
                 cityList.add(line[3]);
+                provMap.put(line[0], line);
                 cityMap.put(line[3], line);
             }
         } catch (IOException e) {
@@ -520,76 +573,100 @@ public class Main {
     }
 
     private void parseFile() {
-        String fileName = "D:\\work\\wenshu\\result\\民事劳动争议-" + year + ".xlsx";
-        FileInputStream file = null;
-        try {
-            file = new FileInputStream(new File(fileName));
-            Workbook workbook = new XSSFWorkbook(file);
-            Sheet sheet = workbook.getSheetAt(0);
+        IOUtils.setByteArrayMaxOverride(1024 * 1024 * 1024 );
+        int year;
+        for (year = 2013; year <= 2020; year++) {
+            System.out.println("year: " + year);
+            String fileName = "D:\\work\\wenshu\\result\\民事劳动争议-" + year + ".xlsx";
+            FileInputStream file = null;
+            try {
+                file = new FileInputStream(new File(fileName));
+                Workbook workbook = new XSSFWorkbook(file);
+                Sheet sheet = workbook.getSheetAt(0);
 
-            Workbook writeWorkBook = new XSSFWorkbook();
-            Sheet writeSheet = writeWorkBook.createSheet("sheet1");
-            Row header = writeSheet.createRow(0);
-            Cell headerCell;
-            String[] line = {"id", "title", "plaintiff", "plaintiff_type", "defendant", "defendant_type", "court",
-                    "city_chn", "city_eng", "city_code", "prov_chn", "prov_eng", "prov_code", "year", "month", "day", "type",
-                    "win", "result"};
-            for (int i = 0; i < line.length; i++) {
-                headerCell = header.createCell(i);
-                headerCell.setCellValue(line[i]);
-            }
+                Workbook writeWorkBook = new XSSFWorkbook();
+                Sheet writeSheet = writeWorkBook.createSheet("sheet1");
+                Row header = writeSheet.createRow(0);
+                Cell headerCell;
+                String[] line = {"id", "title", "plaintiff", "plaintiff_type", "defendant", "defendant_type", "court",
+                        "city_chn", "city_eng", "city_code", "prov_chn", "prov_eng", "prov_code", "year", "month", "day", "type",
+                        "win", "result", "judge"};
+                for (int i = 0; i < line.length; i++) {
+                    headerCell = header.createCell(i);
+                    headerCell.setCellValue(line[i]);
+                }
+//            Path path = Paths.get("D:\\work\\wenshu\\result", "result.csv");
+//                String[] line = {"id", "title", "plaintiff", "plaintiff_type", "defendant", "defendant_type", "court",
+//                        "city_chn", "city_eng", "city_code", "prov_chn", "prov_eng", "prov_code", "year", "month", "day", "type",
+//                        "win", "result"};
+//                csvWriter = new CSVWriter(new FileWriter(path.toFile()));
+//                csvWriter.writeNext(line);
 
-            int count = 0;
-            for (Row row : sheet) {
-                if (count == 0) {
+                int count = 0;
+                for (Row row : sheet) {
+                    if (count == 0) {
+                        count++;
+                        continue;
+                    }
+                    String caseName = row.getCell(1).getStringCellValue();
+                    if (caseName.contains("、")) {
+                        caseName = caseName.replace("、", "及");
+                    }
+                    String caseNo = row.getCell(4).getStringCellValue();
+                    String courtName = row.getCell(2).getStringCellValue();
+                    String refereeDate = row.getCell(7).getStringCellValue();
+                    String caseType = row.getCell(20).getStringCellValue();
+                    Cell htmlCell = row.getCell(19);
+                    String htmlContent = "";
+                    if (htmlCell != null) {
+                        htmlContent = htmlCell.getStringCellValue();
+                    }
+                    String judgmentResult = row.getCell(30).getStringCellValue();
+                    List<String> location = JSONArray.parseArray(row.getCell(32).getStringCellValue(), String.class);
+                    String htmlPath = "D:\\work\\wenshu\\result\\detail\\" + caseNo + ".html";
+                    String provName = location.size() >= 1 ? getProvChn(location.get(0)) : "TBD";
+                    String cityName = location.size() >= 2 ? location.get(1) : "TBD";
+                    List<String> plaintiffList = JSONArray.parseArray(row.getCell(15).getStringCellValue(), String.class);
+                    String defendant = parseDefendant(plaintiffList);
+                    String defendantType = parsePlaintiffType(defendant);
+                    String plaintiff = parsePlaintiff(plaintiffList);
+                    String plaintiffType = parsePlaintiffType(plaintiff);
+                    String judge = parseJudge(row.getCell(29).getStringCellValue());
+                    Date date = DateUtil.parse(refereeDate, "yyyy-MM-dd");
+                    Calendar calendar = Calendar.getInstance(Locale.CHINA);
+                    calendar.setTime(date);
+                    String refereeYear = String.valueOf(calendar.get(Calendar.YEAR));
+                    String refereeMonth = String.valueOf(calendar.get(Calendar.MONTH) + 1);
+                    String refereeDay = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
+                    try {
+                        BufferedWriter writer = new BufferedWriter(new FileWriter(htmlPath));
+                        writer.write(htmlContent);
+                        writer.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    Row writeRow = writeSheet.createRow(count);
+                    String[] parseLine = {caseNo, caseName, plaintiff, plaintiffType, defendant, defendantType,
+                            courtName, cityName, getCityEng(cityName), getCityCode(cityName), provName, getProvEng(provName),
+                            getProvCode(provName), refereeYear, refereeMonth, refereeDay, caseType,
+                            parseWin(plaintiff, plaintiffType, defendant, defendantType, judgmentResult), judgmentResult, judge};
+                    for (int i = 0; i < parseLine.length; i++) {
+                        Cell cell = writeRow.createCell(i);
+                        cell.setCellValue(parseLine[i]);
+                    }
+//                csvWriter.writeNext(parseLine);
                     count++;
-                    continue;
                 }
-                String caseName = row.getCell(1).getStringCellValue();
-                String caseNo = row.getCell(4).getStringCellValue();
-                String courtName = row.getCell(2).getStringCellValue();
-                String refereeDate = row.getCell(7).getStringCellValue();
-                String caseType = row.getCell(20).getStringCellValue();
-                String htmlContent = row.getCell(19).getStringCellValue();
-                String judgmentResult = row.getCell(30).getStringCellValue();
-                String htmlPath = "D:\\work\\wenshu\\result\\" + year + "\\" + caseNo + ".html";
-                String cityName = parseCity(courtName);
-                List<String> plaintiffList = JSONArray.parseArray(row.getCell(15).getStringCellValue(), String.class);
-                String defendant = parseDefendant(plaintiffList);
-                String plaintiff = parsePlaintiff(plaintiffList);
-                Date date = DateUtil.parse(refereeDate, "yyyy-MM-dd");
-                Calendar calendar = Calendar.getInstance(Locale.CHINA);
-                calendar.setTime(date);
-                String refereeYear = String.valueOf(calendar.get(Calendar.YEAR));
-                String refereeMonth = String.valueOf(calendar.get(Calendar.MONTH) + 1);
-                String refereeDay = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
-                try {
-                    BufferedWriter writer = new BufferedWriter(new FileWriter(htmlPath));
-                    writer.write(htmlContent);
-                    writer.close();
-                    System.out.println("write file " + htmlPath);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                Row writeRow = writeSheet.createRow(count);
-                String[] parseLine = {caseNo, caseName, plaintiff, parsePlaintiffType(plaintiff), defendant, parsePlaintiffType(defendant),
-                        courtName, cityName, getCityEng(cityName), getCityCode(cityName), getProvChn(cityName), getProvEng(cityName),
-                        getProvCode(cityName), refereeYear, refereeMonth, refereeDay, caseType,
-                        parseWin(judgmentResult), judgmentResult};
-                for (int i = 0; i < parseLine.length; i++) {
-                    Cell cell = writeRow.createCell(i);
-                    cell.setCellValue(parseLine[i]);
-                }
-                count++;
+                workbook.close();
+//            csvWriter.close();
+                String path = "D:\\work\\wenshu\\result\\result.xlsx";
+                FileOutputStream outputStream = new FileOutputStream(path);
+                writeWorkBook.write(outputStream);
+                writeWorkBook.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            workbook.close();
-            String path = "D:\\work\\wenshu\\result\\" + year + "\\" + year + ".xlsx";
-            FileOutputStream outputStream = new FileOutputStream(path);
-            writeWorkBook.write(outputStream);
-            writeWorkBook.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -604,5 +681,22 @@ public class Main {
             }
         }
         return abbr;
+    }
+
+    private String parseJudge(String tail) {
+        String[] judgeArray = tail.split("\n");
+        List<String> resultList = new ArrayList<>();
+        for (String s : judgeArray) {
+            if (s.contains("代理")) {
+                s = s.replace("代理", "");
+            }
+            if (s.contains("审判员")) {
+                resultList.add(s.replace("审判员", ""));
+            }
+            if (s.contains("审判长")) {
+                resultList.add(s.replace("审判长", ""));
+            }
+        }
+        return String.join(",", resultList);
     }
 }
